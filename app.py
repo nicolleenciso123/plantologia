@@ -109,7 +109,6 @@ if not st.session_state.logged_in:
 # APLICACIÓN PRINCIPAL (SI YA INICIÓ SESIÓN)
 # ==========================================
 else:
-    # Barra lateral con opciones de usuario
     st.sidebar.write(f"👤 Conectado como: **{st.session_state.username}**")
     if st.sidebar.button("Cerrar Sesión"):
         st.session_state.logged_in = False
@@ -119,7 +118,6 @@ else:
     st.title("🌱 Plantas Bogotá")
     st.subheader("Adaptado para la Sabana de Bogotá")
     
-    # Menú de navegación principal con Historial incluido
     menu = st.selectbox(
         "Selecciona una sección:",
         ("🔍 Identificar / Buscar Planta", "📜 Mi Historial de Búsquedas")
@@ -145,7 +143,7 @@ else:
                     with st.spinner("Analizando imagen con Pl@ntNet..."):
                         try:
                             files = {'images': (archivo_imagen.name, archivo_imagen.getvalue(), archivo_imagen.type)}
-                            data = {'organs': 'flower'}
+                            data = {'organs': 'auto'}
                             response = requests.post(PLANTNET_URL, files=files, data=data)
                             
                             if response.status_code == 200:
@@ -159,14 +157,11 @@ else:
                                     
                                     st.success(f"**Resultado:** {especie} (Coincidencia: {puntuacion}%)")
                                     
-                                    # Buscar en la base de datos local
                                     conn = sqlite3.connect('plantas_bogota.db')
-                                    conn.row_factory = sqlite3.Row
                                     cursor = conn.cursor()
                                     cursor.execute("SELECT * FROM plantas WHERE nombre_cientifico LIKE ?", (f"%{especie}%",))
                                     planta_local = cursor.fetchone()
                                     
-                                    # Guardar en el historial del usuario actual
                                     detalle_historial = f"Identificación por foto - Coincidencia: {puntuacion}%"
                                     cursor.execute("INSERT INTO historial (username, nombre_planta, detalle) VALUES (?, ?, ?)",
                                                    (st.session_state.username, especie, detalle_historial))
@@ -175,9 +170,9 @@ else:
                                     
                                     if planta_local:
                                         st.subheader("📋 Ficha Técnica (Sabana de Bogotá)")
-                                        st.write(f"**Nombre Común:** {planta_local['nombre_comun']}")
-                                        st.write(f"**Origen:** {planta_local['origen']}")
-                                        st.write(f"**Uso / Cuidados:** {planta_local['cuidados']}")
+                                        st.write(f"**Nombre Común:** {planta_local[1] if len(planta_local)>1 else 'N/D'}")
+                                        st.write(f"**Nombre Científico:** {planta_local[2] if len(planta_local)>2 else especie}")
+                                        st.write(f"**Origen / Cuidados:** {planta_local[3] if len(planta_local)>3 else 'Información no disponible'}")
                                     else:
                                         st.warning("Identificada, pero pendiente de registro detallado en la Sabana de Bogotá.")
                                 else:
@@ -193,7 +188,6 @@ else:
             
             if busqueda:
                 conn = sqlite3.connect('plantas_bogota.db')
-                conn.row_factory = sqlite3.Row  # Necesario para acceder por clave 'origen', 'cuidados', etc.
                 cursor = conn.cursor()
                 query = "SELECT * FROM plantas WHERE nombre_comun LIKE ? OR nombre_cientifico LIKE ?"
                 cursor.execute(query, (f"%{busqueda}%", f"%{busqueda}%"))
@@ -202,13 +196,17 @@ else:
                 if resultados:
                     st.success(f"Se encontraron {len(resultados)} resultado(s):")
                     for r in resultados:
-                        with st.expander(f"🌿 {r['nombre_comun']} ({r['nombre_cientifico']})"):
-                            st.write(f"**Origen:** {r['origen']}")
-                            st.write(f"**Cuidados / Descripción:** {r['cuidados']}")
+                        # Usamos posiciones numéricas seguras de las columnas para evitar errores de nombres
+                        nombre_c = r[1] if len(r) > 1 else "Planta"
+                        nombre_ci = r[2] if len(r) > 2 else ""
+                        info_extra = r[3] if len(r) > 3 else "Sin detalles registrados"
+                        
+                        with st.expander(f"🌿 {nombre_c} ({nombre_ci})"):
+                            st.write(f"**Detalles / Cuidados:** {info_extra}")
                             
                             # Guardar en el historial
                             cursor.execute("INSERT INTO historial (username, nombre_planta, detalle) VALUES (?, ?, ?)",
-                                           (st.session_state.username, r['nombre_comun'], f"Búsqueda por texto: {r['nombre_cientifico']}"))
+                                           (st.session_state.username, nombre_c, f"Búsqueda por texto: {nombre_ci}"))
                             conn.commit()
                 else:
                     st.error("No se encontraron plantas registradas con ese nombre.")
