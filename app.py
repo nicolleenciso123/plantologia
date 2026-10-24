@@ -14,7 +14,7 @@ st.set_page_config(
 PLANTNET_API_KEY = "2b102MvS2gH07X87rRk7w79sO"
 PLANTNET_URL = f"https://my-api.plantnet.org/v2/identify/all?api-key={PLANTNET_API_KEY}"
 
-# --- GESTIÓN DE BASE DE DATOS Y TABLAS NUEVAS ---
+# --- GESTIÓN DE BASE DE DATOS Y TABLAS ---
 def init_db():
     conn = sqlite3.connect('plantas_bogota.db')
     cursor = conn.cursor()
@@ -193,7 +193,7 @@ else:
             
             if busqueda:
                 conn = sqlite3.connect('plantas_bogota.db')
-                conn.row_factory = sqlite3.Row
+                conn.row_factory = sqlite3.Row  # Necesario para acceder por clave 'origen', 'cuidados', etc.
                 cursor = conn.cursor()
                 query = "SELECT * FROM plantas WHERE nombre_comun LIKE ? OR nombre_cientifico LIKE ?"
                 cursor.execute(query, (f"%{busqueda}%", f"%{busqueda}%"))
