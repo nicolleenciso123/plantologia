@@ -192,4 +192,4 @@ elif eleccion == "📜 Mi Historial":
         else:
             st.info("Aún no tienes consultas registradas en tu historial.")
     else:
-        st.warning("Debes iniciar sesión para ver tu historial de consultas.")ss
+        st.warning("Debes iniciar sesión para ver tu historial de consultas.")
